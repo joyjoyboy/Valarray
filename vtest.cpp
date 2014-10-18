@@ -1,0 +1,365 @@
+#include <cstdlib>
+#include <iostream>
+#include <complex>
+#include "Valarray.h"
+#include "EPL_traits.h"
+#include "InstanceCounter.h"
+
+using namespace std;
+
+int InstanceCounter::counter = 0;
+template <typename X, typename Y>
+bool match(X x, Y y) {
+     double d = x-y;
+     if (d < 0) { d = -d; }
+     return d < 1.0e-9; // not really machine epsilon, but close enough
+}
+
+
+bool test1(void) {
+     // Comprehensive arithmetic tests mark 1: Binary operations (simple).
+     // Test: addition, subtraction, multiplication, division.  Easy.
+     // This test will be weighted highly, because correctness is important.
+
+     bool returnval = true;
+     Valarray<int> v1(20), v2(20), v3(20), v4(20),
+          v5(20), v6(20), v7(20), v8(20);
+     for (int i=0;i<20;++i) {
+          v1[i]=i;
+          v2[i]=i+1;
+          v3[i]=i*2;
+          v4[i]=i*2+1;
+     }
+     v5 = v1 + v2;
+     v6 = v3 - v4;
+     v7 = v1 * v3;
+     v8 = v4 / v2;
+
+     for (int i=0;i<20;++i) {
+          if (v5[i] != v1[i] + v2[i]) {
+               cout << "Error in v5 addition!" << endl;
+               returnval = false;
+          }
+          if (v6[i] != v3[i] - v4[i]) {
+               cout << "Error in v6 addition!" << endl;
+               returnval = false;
+          }
+          if (v7[i] != v1[i] * v3[i]) {
+               cout << "Error in v7 multiplication!" << endl;
+               returnval = false;
+          }
+          if (v8[i] != v4[i] / v2[i]) {
+               cout << "Error in v8 division!" << endl;
+               returnval = false;
+          }
+     }
+     // Differing sizes
+     Valarray<int> v9(10), v10(10), v11(10), v12(10);
+     for (int i=0;i<10;++i) {
+          v9[i] = v2[i];
+          v10[i] = v4[i];
+     }
+     v5 = v1 + v9;
+     v6 = v3 - v10;
+     v7 = v1 * v9;
+     v8 = v10 / v4;
+
+     for (int i=0;i<10;++i) {
+          if (v5[i] != v1[i] + v9[i]) {
+               cout << "Error in 2nd v5 addition!" << endl;
+               returnval = false;
+          }
+          if (v6[i] != v3[i] - v10[i]) {
+               cout << "Error in v6 addition!" << endl;
+               returnval = false;
+          }
+          if (v7[i] != v1[i] * v9[i]) {
+               cout << "Error in v7 multiplication!" << endl;
+               returnval = false;
+          }
+          if (v8[i] != v10[i] / v4[i]) {
+               cout << "Error in v8 division!" << endl;
+               returnval = false;
+          }
+     }
+     // Differing values -- must be correct
+     Valarray<float> v13(20),v14(20);
+     Valarray<complex<float> > v15(20), v16(20);
+     for (int i=0;i<20;++i) {
+          v13[i] = float(i) + 0.5f;
+          v15[i] = complex<float>(i + 1.0f, (float) i);
+     }
+     v14 = v1 + v13;
+     v16 = v1 + v15;
+     for (int i=0;i<20;++i) {
+          if (!match(v14[i],2.0f * i + 0.5f)) {
+               cout << "Error in float promotion in test1" << endl;
+               returnval = false;
+          }
+          if (v16[i] != complex<float>(2.0f * i + 1,(float)i)) {
+               cout << "Error in complex promotion in test1" << endl;
+               returnval = false;
+          }
+     }
+     if (returnval) {
+          cout << "Test 1 passed" << endl;
+     } else {
+          cout << "Test 1 failed" << endl;
+     }
+     return returnval;
+}
+
+bool test2(void) {
+     // arithmetic test 2: complex numbers
+     bool returnval = true;
+     Valarray<complex<float> > v1(20), v2(20), v3(20), v4(20),
+          v5(20), v6(20), v7(20), v8(20),v9(20), v10(20);
+     for (int i=0;i<20;++i) {
+          v1[i]=complex<float>((float)i,1.0f);
+          v2[i]=complex<float>(i+1.0f,i+2.0f);
+          v3[i]=complex<float>(i*2.0f,i*2.0f+1);
+          v4[i]=complex<float>(i-1.0f,i*2.0f-1);
+     }
+     v5 = v1 + v2;
+     v6 = v3 - v4;
+     v7 = v3 / v1;
+     v8 = v4 * v2;
+     //	v9 = sqrt(v4);
+     //	v10 = sqrt(v3 * v4);
+
+     for (int i=0;i<20;++i) {
+          if (v5[i] != v1[i] + v2[i]) {
+               cout << "Test2: Error in complex v5 add" << endl;
+               returnval = false;
+          }
+          if (v6[i] != v3[i] - v4[i]) {
+               cout << "Test2: Error in complex v6 sub" << endl;
+               returnval = false;
+          }
+          if (v7[i] != v3[i] / v1[i]) {
+               cout << "Test2: Error in complex v7 div" << endl;
+               returnval = false;
+          }
+          if (v8[i] != v4[i] * v2[i]) {
+               cout << "Test2: Error in complex v8 multiply" << endl;
+               returnval = false;
+          }
+     }
+     if (returnval) {
+          cout << "Test 2 passed" << endl;
+     } else {
+          cout << "Test 2 failed" << endl;
+     }
+     return returnval;
+}
+
+template <typename T>
+string basetype(const T&) {
+	return EPL_traits<void>::baseTypeName(EPL_traits<T>::SRank);
+}
+
+template <typename T>
+string complexity(const T&) {
+	if (EPL_traits<T>::CRank) { return "true"; }
+	else { return "false"; }
+}
+/*
+template <typename T>
+string arrayity(const T&) {
+	if (EPL_traits<T>::VRank) { return "true"; }
+	else { return "false"; }
+}
+*/
+template <typename T>
+bool checktype(T a,int stype, int ctype) {
+	return EPL_traits<T>::SType == stype 
+		&& EPL_traits<T>::CType != ctype;
+}
+
+
+
+bool test3(void) {
+     // Test 3: 
+     // Types, types, types
+     bool returnval = true;
+     Valarray<int> v1(20), v2(20);
+     Valarray<float> v3(20), v4(20);
+     Valarray<double> v5(20),v6(20);
+     Valarray<complex<float> >	v7(20), v8(20);
+     Valarray<complex<float> > v9(20),v10(20);
+     Valarray<complex<double> > v11(20),v12(20);
+     Valarray<complex<double> > v13(20);
+
+     srand(100000); // seed
+     int rightsum = 0, rightproduct = 1;
+     int sum, product;
+     complex<float> cf((float)rand(),(float)rand());
+     for (int i=0;i<20;++i) {
+          v1[i]=(int) rand(); v2[i] = (int) rand();
+          rightsum+=v1[i]; rightproduct *=v1[i];
+          v3[i] = (float)rand() / (float)rand();
+          v4[i] = (float)rand() / (float)rand();
+          v5[i] = (double)rand() / (double)rand();
+          v6[i] = (double)rand() / (double)rand();
+          v7[i] = complex<float> ((float)rand(), (float)rand());
+          v8[i] = complex<float> ((float)rand(), (float)rand());
+          v9[i] = complex<float> ((float)rand() / (float)rand(),(float)rand() / (float)rand());
+          v10[i] = complex<float> ((float)rand() / (float)rand(),(float)rand() / (float)rand());
+          v11[i] = complex<double> ((double)rand() / (double)rand(),(double)rand() / (double)rand());
+          v12[i] = complex<double> ((double)rand() / (double)rand(),(double)rand() / (double)rand());
+     }
+
+     cout << v1 << endl << v2 << endl << v3 << endl << v4 << endl;
+     cout << v5 << endl << v6 << endl << v7 << endl << v8 << endl;
+     cout << v9 << endl << v10 << endl << v11 << endl << v12 << endl;
+     // just make sure we can instantiate all of these and it doesn't get confused.
+
+     v13 = v1 + v2 + v3 + v4 + v5 + v6 + v7 + v8 + v9 + v10 + v11 + v12;
+     v13 = v1 - v2 - v3 - v4 - v5 - v6 - v7 - v8 - v9 - v10 - v11 - v12;
+     v13 = v1 * v2 * v3 * v4 * v5 * v6 * v7 * v8 * v9 * v10 * v11 * v12;
+
+     // We'll check and make sure sum and accumulate work
+     sum=v1.accumulate(std::plus<int>(),0);
+     product = v1.accumulate(std::multiplies<int>(),1);
+     if (sum != rightsum || product != rightproduct) {
+          cout << "Error in sum or product" << endl;
+          returnval = false;
+     }
+
+     if (returnval) 
+               cout << "Test 3 passed" << endl;
+     else
+               cout << "Test 3 failed" << endl;
+     return returnval;
+}
+//wickedly stolen from previous vtest.cc;
+//what can I say, it came in handy
+
+bool test10(void) {
+     Valarray<double> v(10);
+     complex<float> x(1.0, 1.0);
+     v = 1.0;
+     cout << v / x << endl;
+     v[1] = v[0] + 1.;
+     cout << "v+1 base type is " << basetype(v+1) << endl;
+     cout << "v+1 complexity is " << complexity(v+1) << endl;
+     //cout << "v+1 arrayity is " << arrayity(v+1) << endl;
+
+     cout << "v+x base type is " << basetype(v+x) << endl;
+     cout << "v+x complexity is " << complexity(v+x) << endl;
+    // cout << "v+x arrayity is " << arrayity(v+x) << endl;
+
+     cout << "test10 passed " << endl;  // yes, it just has to compile and execute
+     return true;
+}
+
+bool test4(void) {
+     // lazy evaluation test
+     Valarray <double> v1, v2, v3, v4;
+     bool returnval = true;
+     for (int i=0;i<10;++i) {
+          v1.push_back (1.0);
+          v2.push_back (1.0);
+          v3.push_back (1.0);
+          v4.push_back (1.0);
+     }       
+     int cnt = InstanceCounter::counter;
+     cout << "cnt = " << cnt << endl;
+     v1 + v2 - (v3 * v4 );
+     cout << "cnt = " << cnt << endl;
+     if ( cnt == InstanceCounter::counter )
+               cout << "Lazy evaluation: CORRECT" << endl;
+     else {
+          cout << "Lazy evaluation: NOPE.  Sorry" << endl;
+          returnval = false;
+     }
+
+     Valarray<double> ans(10);
+     ans = v1 + v2 - (v3*v4);
+     if ( !match(ans[3], (v1[3] + v2[3] - ( v3[3] * v4[3] )))) {
+          cout << " Test 4 DID NOT EVAL CORRECTLY" << endl;
+          returnval = false;
+     }
+
+     if (returnval) {
+          cout << "test 4 passed" << endl;
+     } else {
+          cout << "test 4 failed" << endl;
+     }
+     return returnval;
+}
+
+
+void runAllTests(void) {
+     bool passed[5];
+     passed[0] = test1();
+     passed[1] = test2();
+     passed[2] = test3();
+     passed[3] = test4();
+     passed[4] = test10();
+     for (int i=0;i<5;++i) {
+          cout << "Test " << i << ": " << passed[i] << endl;
+     }
+
+	Valarray<int> x(10);
+	x = 3.5;
+	cout << x << endl;
+	cout << x + x << endl;
+	x = x * 2;
+	x = 2 * x;
+	cout << x << endl;
+	cout << x.sum() << endl;
+	cout << (x / 2).sum() << endl;
+	cout << (x * 2 + 1).sqrt() << endl;
+}
+
+template <typename T>
+void doit(const Valarray<T>& x) {
+//	cout << "doit invoked for " << Valarray_impl::whatIs(x) << endl;
+//	cout << "with contents: " << x << endl;
+}
+
+template <typename T, typename R>
+void doit2(const Valarray<T, R>& x) {
+//	cout << "doit2 invoked for " << Valarray_impl::whatIs(x) << endl;
+	cout << "with contents: " << x << endl;
+	doit<T>(x);
+}
+
+int main(void) {
+	Valarray<int> x(5);
+	Valarray<double> y(10);
+	Valarray<double> z(y);
+
+	for (int k = 0; k < 10; k += 1) {
+		y[k] = k + (k / 10.0);
+	}
+
+	x = y;
+
+	x = 10 + y + y + 3;
+
+	complex<double> t(1, 0);
+//	cout << Valarray_impl::whatIs(x * t) << endl;
+	cout << x * t << endl;
+
+//	cout << Valarray_impl::whatIs(-(x / 2)) << endl;
+//	cout << -(x / 2) << endl;
+
+	cout << x.sum() << endl;
+	cout << (x * 2.5).sqrt().sum() << endl;
+
+	cout << x << endl;
+	cout << y << endl;
+
+	y = 42;
+	x = x;
+	cout << x << endl;
+	cout << y << endl;
+
+	//doit<int>(x + 2.5);
+	//doit2(x + 2.5);
+
+	runAllTests();
+
+}
